@@ -34,31 +34,7 @@
                                 </select>
                             </div>
 
-                            <h3 style="margin-top: 16px; margin-bottom: 12px; color: #10b981;">Costi Azienda</h3>
-
-                            <div class="form-row">
-                                <div class="form-group">
-                                    <label>Costo Orario (€/h)</label>
-                                    <input type="number" id="costoOrario" step="0.01" min="0">
-                                </div>
-                                <div class="form-group">
-                                    <label>Accessori (%)</label>
-                                    <input type="number" id="accessoriPercent" step="0.1" min="0" max="100">
-                                </div>
-                            </div>
-
-                            <div class="form-row">
-                                <div class="form-group">
-                                    <label>Costo Prodotti (€/mq)</label>
-                                    <input type="number" id="costoProdottiPerMq" step="0.01" min="0">
-                                </div>
-                                <div class="form-group">
-                                    <label>Costo Km (€/km)</label>
-                                    <input type="number" id="costoKm" step="0.01" min="0">
-                                </div>
-                            </div>
-
-                            <h3 style="margin-top: 20px; margin-bottom: 12px; color: #60a5fa;">Prezzi Vendita</h3>
+                            <h3 style="margin-top: 16px; margin-bottom: 12px; color: #60a5fa;">Prezzi Vendita</h3>
 
                             <div class="form-row">
                                 <div class="form-group">
@@ -88,6 +64,20 @@
                                 </div>
                             </div>
 
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label>Modalità Prezzo Km</label>
+                                    <select id="modalitaPrezzoKm">
+                                        <option value="percentuale">Margine %</option>
+                                        <option value="fisso">Prezzo Fisso (€/km)</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label id="labelPrezzoKm">Margine Km (%)</label>
+                                    <input type="number" id="prezzoKm" step="0.01" min="0" value="30">
+                                </div>
+                            </div>
+
                             <h3 style="margin-top: 20px; margin-bottom: 12px; color: #f59e0b;">Trasferta</h3>
 
                             <div class="form-row">
@@ -96,21 +86,7 @@
                                     <input type="number" id="kmTotali" step="0.1" min="0" value="0">
                                 </div>
                                 <div class="form-group">
-                                    <label>Modalità Prezzo Km</label>
-                                    <select id="modalitaPrezzoKm">
-                                        <option value="percentuale">Margine %</option>
-                                        <option value="fisso">Prezzo Fisso (€/km)</option>
-                                    </select>
-                                </div>
-                            </div>
-
-                            <div class="form-row">
-                                <div class="form-group">
-                                    <label id="labelPrezzoKm">Margine Km (%)</label>
-                                    <input type="number" id="prezzoKm" step="0.01" min="0" value="30">
-                                </div>
-                                <div class="form-group">
-                                    <label>Trasferta</label>
+                                    <label>Tipo Trasferta</label>
                                     <select id="trasfertaTipo">
                                         <option value="per_intervento">Per intervento</option>
                                         <option value="una_tantum">Una tantum</option>

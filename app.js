@@ -71,11 +71,6 @@ function initializeApp() {
     initializeCalculationTab();
     initializeSettingsTab();
 
-    document.getElementById('costoOrario').value = config.defaultHourlyCost;
-    document.getElementById('accessoriPercent').value = clampAccessoriesPercent(config.defaultAccessoryPercent);
-    document.getElementById('costoProdottiPerMq').value = config.defaultMaterialCostPerM2;
-    document.getElementById('costoKm').value = config.defaultKmCost;
-
     document.getElementById('prezzoLavoro').value = config.defaultMarginLavoro || 30;
     document.getElementById('prezzoProdotti').value = config.defaultMarginProdotti || 30;
     document.getElementById('prezzoKm').value = config.defaultMarginKm || 30;
@@ -105,7 +100,7 @@ function initializeCalculationTab() {
 
     document.getElementById('tipoPreventivo').addEventListener('change', handleTipoPreventivoChange);
 
-    const inputsTriggerCalc = ['costoOrario', 'accessoriPercent', 'costoProdottiPerMq', 'costoKm', 'kmTotali', 'trasfertaTipo', 'combinazioneInterventi', 'tipoPreventivo',
+    const inputsTriggerCalc = ['kmTotali', 'trasfertaTipo', 'combinazioneInterventi', 'tipoPreventivo',
         'prezzoLavoro', 'prezzoProdotti', 'prezzoKm', 'modalitaPrezzoLavoro', 'modalitaPrezzoProdotti', 'modalitaPrezzoKm'];
     inputsTriggerCalc.forEach(id => {
         const element = document.getElementById(id);
@@ -347,10 +342,10 @@ function removeExtra(extraId) {
 
 function calculate() {
     const tipoPreventivo = document.getElementById('tipoPreventivo').value;
-    const costoOrario = parseFloat(document.getElementById('costoOrario').value) || 0;
-    const accessoriPercent = parseFloat(clampAccessoriesPercent(document.getElementById('accessoriPercent').value)) || 0;
-    const costoProdottiPerMq = parseFloat(document.getElementById('costoProdottiPerMq').value) || 0;
-    const costoKm = parseFloat(document.getElementById('costoKm').value) || 0;
+    const costoOrario = config.defaultHourlyCost;
+    const accessoriPercent = config.defaultAccessoryPercent;
+    const costoProdottiPerMq = config.defaultMaterialCostPerM2;
+    const costoKm = config.defaultKmCost;
     const kmTotali = parseFloat(document.getElementById('kmTotali').value) || 0;
     const trasfertaTipo = document.getElementById('trasfertaTipo').value;
     const combinazione = document.getElementById('combinazioneInterventi').value;
@@ -860,11 +855,6 @@ function saveSettingsToConfig() {
     config.weeksPerMonth = parseFloat(document.getElementById('set_weeksPerMonth').value);
 
     localStorage.setItem('cleaningConfig', JSON.stringify(config));
-
-    document.getElementById('costoOrario').value = config.defaultHourlyCost;
-    document.getElementById('accessoriPercent').value = clampAccessoriesPercent(config.defaultAccessoryPercent);
-    document.getElementById('costoProdottiPerMq').value = config.defaultMaterialCostPerM2;
-    document.getElementById('costoKm').value = config.defaultKmCost;
 
     calculate();
 }
