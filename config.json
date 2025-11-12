@@ -1,0 +1,29 @@
+{
+  "productivityRate_m2_per_h": 120,
+  "productivityRatesByType": {
+    "uffici": 120,
+    "bagni": 40,
+    "vetrate": 80,
+    "scale": 60,
+    "magazzino": 150
+  },
+  "difficultyCoefficients": [
+    1,
+    1.25,
+    1.5,
+    1.75,
+    2
+  ],
+  "defaultHourlyCost": 22,
+  "defaultAccessoryPercent": 10,
+  "defaultMaterialCostPerM2": 0.05,
+  "defaultProductUseCoefficients": [
+    1,
+    1.25,
+    1.5
+  ],
+  "defaultKmCost": 0.5,
+  "defaultMinimumHours": 1,
+  "roundToQuarterHour": true,
+  "weeksPerMonth": 4.333
+}

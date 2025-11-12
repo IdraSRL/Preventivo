@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 16 16\'%3E%3Crect width=\'16\' height=\'16\' rx=\'3\'/%3E%3Ctext x=\'8\' y=\'12\' font-size=\'10\' text-anchor=\'middle\' fill=\'white\'%3EP%3C/text%3E%3C/svg%3E">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Calcolatore Preventivi Pulizie</title>
+    <link rel="stylesheet" href="app.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Calcolatore Preventivi Pulizie</h1>
+            <nav class="tabs">
+                <button class="tab-button active" data-tab="calcolo">Calcolo</button>
+                <button class="tab-button" data-tab="impostazioni">Impostazioni</button>
+            </nav>
+        </header>
+
+        <main class="main-content">
+            <!-- TAB CALCOLO -->
+            <div id="tab-calcolo" class="tab-content active">
+                <div class="two-column-layout">
+                    <div class="left-panel">
+                        <!-- Parametri Generali -->
+                        <section class="panel">
+                            <h2>Parametri Generali</h2>
+
+                            <div class="form-group">
+                                <label>Tipo Preventivo</label>
+                                <select id="tipoPreventivo">
+                                    <option value="POR">POR - Pulizia Ordinaria</option>
+                                    <option value="PST">PST - Pulizia Straordinaria</option>
+                                </select>
+                            </div>
+
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label>Costo Orario (€/h)</label>
+                                    <input type="number" id="costoOrario" step="0.01" min="0">
+                                </div>
+                                <div class="form-group">
+                                    <label>Accessori (%)</label>
+                                    <input type="number" id="accessoriPercent" step="0.1" min="0" max="100">
+                                </div>
+                            </div>
+
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label>Km Totali (A/R)</label>
+                                    <input type="number" id="kmTotali" step="0.1" min="0" value="0">
+                                </div>
+                                <div class="form-group">
+                                    <label>Trasferta</label>
+                                    <select id="trasfertaTipo">
+                                        <option value="per_intervento">Per intervento</option>
+                                        <option value="una_tantum">Una tantum</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="form-group" id="combinazioneGroup">
+                                <label>Combinazione Interventi (solo POR)</label>
+                                <select id="combinazioneInterventi">
+                                    <option value="MAX">MAX - Aree combinate nello stesso passaggio</option>
+                                    <option value="SUM">SUM - Aree non combinabili</option>
+                                </select>
+                            </div>
+                        </section>
+
+                        <!-- Aree -->
+                        <section class="panel">
+                            <div class="section-header">
+                                <h2>Aree</h2>
+                                <button id="addArea" class="btn-add">+ Aggiungi Area</button>
+                            </div>
+                            <div id="areeContainer"></div>
+                        </section>
+
+                        <!-- Costi Extra -->
+                        <section class="panel">
+                            <div class="section-header">
+                                <h2>Costi Extra</h2>
+                                <button id="addExtra" class="btn-add">+ Aggiungi Extra</button>
+                            </div>
+                            <div id="extraContainer"></div>
+                        </section>
+                    </div>
+
+                    <div class="right-panel">
+                        <section class="panel results-panel" id="resultsPanel">
+                            <h2>Risultati</h2>
+                            <div id="resultsContent"></div>
+                        </section>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB IMPOSTAZIONI -->
+            <div id="tab-impostazioni" class="tab-content">
+                <div class="settings-layout">
+                    <section class="panel">
+                        <h2>Impostazioni Generali</h2>
+
+                        <div class="form-group">
+                            <label>Resa Media (mq/h)</label>
+                            <input type="number" id="set_productivityRate" step="1" min="0">
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Costo Orario Default (€/h)</label>
+                                <input type="number" id="set_hourlyCost" step="0.01" min="0">
+                            </div>
+                            <div class="form-group">
+                                <label>Accessori Default (%)</label>
+                                <input type="number" id="set_accessoryPercent" step="0.1" min="0">
+                            </div>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Costo Prodotti (€/mq)</label>
+                                <input type="number" id="set_materialCost" step="0.01" min="0">
+                            </div>
+                            <div class="form-group">
+                                <label>Costo Km (€/km)</label>
+                                <input type="number" id="set_kmCost" step="0.01" min="0">
+                            </div>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Ore Minime per Intervento</label>
+                                <input type="number" id="set_minimumHours" step="0.25" min="0">
+                            </div>
+                            <div class="form-group checkbox-group">
+                                <label>
+                                    <input type="checkbox" id="set_roundToQuarter">
+                                    Arrotonda a 0.25h
+                                </label>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Settimane per Mese</label>
+                            <input type="number" id="set_weeksPerMonth" step="0.001" min="0">
+                        </div>
+                    </section>
+
+                    <section class="panel">
+                        <h2>Rese per Tipo Area</h2>
+                        <div id="reseTipoAreaContainer"></div>
+                    </section>
+
+                    <section class="panel">
+                        <h2>Coefficienti Difficoltà</h2>
+                        <div id="coefficientiDifficoltaContainer"></div>
+                    </section>
+
+                    <section class="panel">
+                        <h2>Moltiplicatori Uso Prodotti</h2>
+                        <div id="moltiplicatoriProdottiContainer"></div>
+                    </section>
+
+                    <section class="panel">
+                        <h2>Gestione Configurazione</h2>
+                        <div class="button-group">
+                            <button id="downloadConfig" class="btn-primary">Scarica config.json</button>
+                            <button id="importConfig" class="btn-secondary">Importa JSON</button>
+                            <button id="exportConfig" class="btn-secondary">Esporta JSON</button>
+                            <button id="showConfig" class="btn-secondary">Mostra JSON</button>
+                        </div>
+                        <input type="file" id="fileInput" accept=".json" style="display: none;">
+                        <textarea id="jsonDisplay" class="json-display" readonly style="display: none;"></textarea>
+                    </section>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script type="module" src="app.js"></script>
+</body>
+</html>
