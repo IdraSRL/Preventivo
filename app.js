@@ -56,7 +56,13 @@ function getDefaultConfig() {
         defaultKmCost: 0.50,
         defaultMinimumHours: 1.0,
         roundToQuarterHour: true,
-        weeksPerMonth: 4.333
+        weeksPerMonth: 4.333,
+        defaultMarginLavoro: 30,
+        defaultMarginProdotti: 30,
+        defaultMarginKm: 30,
+        defaultPriceHourly: 28.60,
+        defaultPriceProducts: 0.065,
+        defaultPriceKm: 0.65
     };
 }
 
@@ -67,7 +73,14 @@ function initializeApp() {
 
     document.getElementById('costoOrario').value = config.defaultHourlyCost;
     document.getElementById('accessoriPercent').value = clampAccessoriesPercent(config.defaultAccessoryPercent);
+    document.getElementById('costoProdottiPerMq').value = config.defaultMaterialCostPerM2;
+    document.getElementById('costoKm').value = config.defaultKmCost;
 
+    document.getElementById('prezzoLavoro').value = config.defaultMarginLavoro || 30;
+    document.getElementById('prezzoProdotti').value = config.defaultMarginProdotti || 30;
+    document.getElementById('prezzoKm').value = config.defaultMarginKm || 30;
+
+    setupPriceModalityListeners();
     addArea();
 }
 
@@ -92,7 +105,8 @@ function initializeCalculationTab() {
 
     document.getElementById('tipoPreventivo').addEventListener('change', handleTipoPreventivoChange);
 
-    const inputsTriggerCalc = ['costoOrario', 'accessoriPercent', 'kmTotali', 'trasfertaTipo', 'combinazioneInterventi', 'tipoPreventivo'];
+    const inputsTriggerCalc = ['costoOrario', 'accessoriPercent', 'costoProdottiPerMq', 'costoKm', 'kmTotali', 'trasfertaTipo', 'combinazioneInterventi', 'tipoPreventivo',
+        'prezzoLavoro', 'prezzoProdotti', 'prezzoKm', 'modalitaPrezzoLavoro', 'modalitaPrezzoProdotti', 'modalitaPrezzoKm'];
     inputsTriggerCalc.forEach(id => {
         const element = document.getElementById(id);
         if (element) {
@@ -114,6 +128,44 @@ function initializeCalculationTab() {
     });
 
     handleTipoPreventivoChange();
+}
+
+function setupPriceModalityListeners() {
+    document.getElementById('modalitaPrezzoLavoro').addEventListener('change', function() {
+        const label = document.getElementById('labelPrezzoLavoro');
+        if (this.value === 'percentuale') {
+            label.textContent = 'Margine Lavoro (%)';
+            document.getElementById('prezzoLavoro').value = config.defaultMarginLavoro || 30;
+        } else {
+            label.textContent = 'Prezzo Lavoro (€/h)';
+            document.getElementById('prezzoLavoro').value = config.defaultPriceHourly || 28.60;
+        }
+        calculate();
+    });
+
+    document.getElementById('modalitaPrezzoProdotti').addEventListener('change', function() {
+        const label = document.getElementById('labelPrezzoProdotti');
+        if (this.value === 'percentuale') {
+            label.textContent = 'Margine Prodotti (%)';
+            document.getElementById('prezzoProdotti').value = config.defaultMarginProdotti || 30;
+        } else {
+            label.textContent = 'Prezzo Prodotti (€/mq)';
+            document.getElementById('prezzoProdotti').value = config.defaultPriceProducts || 0.065;
+        }
+        calculate();
+    });
+
+    document.getElementById('modalitaPrezzoKm').addEventListener('change', function() {
+        const label = document.getElementById('labelPrezzoKm');
+        if (this.value === 'percentuale') {
+            label.textContent = 'Margine Km (%)';
+            document.getElementById('prezzoKm').value = config.defaultMarginKm || 30;
+        } else {
+            label.textContent = 'Prezzo Km (€/km)';
+            document.getElementById('prezzoKm').value = config.defaultPriceKm || 0.65;
+        }
+        calculate();
+    });
 }
 
 function handleTipoPreventivoChange() {
@@ -297,14 +349,23 @@ function calculate() {
     const tipoPreventivo = document.getElementById('tipoPreventivo').value;
     const costoOrario = parseFloat(document.getElementById('costoOrario').value) || 0;
     const accessoriPercent = parseFloat(clampAccessoriesPercent(document.getElementById('accessoriPercent').value)) || 0;
+    const costoProdottiPerMq = parseFloat(document.getElementById('costoProdottiPerMq').value) || 0;
+    const costoKm = parseFloat(document.getElementById('costoKm').value) || 0;
     const kmTotali = parseFloat(document.getElementById('kmTotali').value) || 0;
     const trasfertaTipo = document.getElementById('trasfertaTipo').value;
     const combinazione = document.getElementById('combinazioneInterventi').value;
 
+    const modalitaPrezzoLavoro = document.getElementById('modalitaPrezzoLavoro').value;
+    const prezzoLavoro = parseFloat(document.getElementById('prezzoLavoro').value) || 0;
+    const modalitaPrezzoProdotti = document.getElementById('modalitaPrezzoProdotti').value;
+    const prezzoProdotti = parseFloat(document.getElementById('prezzoProdotti').value) || 0;
+    const modalitaPrezzoKm = document.getElementById('modalitaPrezzoKm').value;
+    const prezzoKm = parseFloat(document.getElementById('prezzoKm').value) || 0;
+
     const aree = collectAreas();
     const extras = collectExtras();
 
-    const areeDetails = calculateAree(aree);
+    const areeDetails = calculateAree(aree, costoProdottiPerMq);
 
     let oreOperative = areeDetails.reduce((sum, area) => sum + area.oreBase, 0);
     let oreTotali = oreOperative * (1 + accessoriPercent / 100);
@@ -319,41 +380,84 @@ function calculate() {
 
     const costoLavoro = oreTotali * costoOrario;
     const costoProdotti = areeDetails.reduce((sum, area) => sum + area.costoProdotti, 0);
-    const trasferta = kmTotali * config.defaultKmCost;
+    const costoTrasferta = kmTotali * costoKm;
 
-    const extraPerIntervento = extras.filter(e => e.tipo === 'per_intervento')
-        .reduce((sum, e) => sum + (e.qty * e.cost), 0);
-    const extraUnaTantum = extras.filter(e => e.tipo === 'una_tantum')
-        .reduce((sum, e) => sum + (e.qty * e.cost), 0);
-
-    let trasfertaPerIntervento = 0;
-    let trasfertaUnaTantum = 0;
-
-    if (trasfertaTipo === 'per_intervento') {
-        trasfertaPerIntervento = trasferta;
+    let prezzoLavoroCalc = 0;
+    if (modalitaPrezzoLavoro === 'percentuale') {
+        prezzoLavoroCalc = costoLavoro * (1 + prezzoLavoro / 100);
     } else {
-        trasfertaUnaTantum = trasferta;
+        prezzoLavoroCalc = oreTotali * prezzoLavoro;
     }
 
-    const costoRicorrente = costoLavoro + costoProdotti + trasfertaPerIntervento + extraPerIntervento;
-    const costoUnaTantum = trasfertaUnaTantum + extraUnaTantum;
+    let prezzoProdottiCalc = 0;
+    const mqTotali = areeDetails.reduce((sum, area) => sum + area.mq, 0);
+    if (modalitaPrezzoProdotti === 'percentuale') {
+        prezzoProdottiCalc = costoProdotti * (1 + prezzoProdotti / 100);
+    } else {
+        prezzoProdottiCalc = mqTotali * prezzoProdotti;
+    }
 
+    let prezzoTrasfertaCalc = 0;
+    if (modalitaPrezzoKm === 'percentuale') {
+        prezzoTrasfertaCalc = costoTrasferta * (1 + prezzoKm / 100);
+    } else {
+        prezzoTrasfertaCalc = kmTotali * prezzoKm;
+    }
+
+    const extraCostoPerIntervento = extras.filter(e => e.tipo === 'per_intervento')
+        .reduce((sum, e) => sum + (e.qty * e.cost), 0);
+    const extraCostoUnaTantum = extras.filter(e => e.tipo === 'una_tantum')
+        .reduce((sum, e) => sum + (e.qty * e.cost), 0);
+
+    let costoTrasfertaPerIntervento = 0;
+    let costoTrasfertaUnaTantum = 0;
+    let prezzoTrasfertaPerIntervento = 0;
+    let prezzoTrasfertaUnaTantum = 0;
+
+    if (trasfertaTipo === 'per_intervento') {
+        costoTrasfertaPerIntervento = costoTrasferta;
+        prezzoTrasfertaPerIntervento = prezzoTrasfertaCalc;
+    } else {
+        costoTrasfertaUnaTantum = costoTrasferta;
+        prezzoTrasfertaUnaTantum = prezzoTrasfertaCalc;
+    }
+
+    const costoRicorrente = costoLavoro + costoProdotti + costoTrasfertaPerIntervento + extraCostoPerIntervento;
+    const costoUnaTantum = costoTrasfertaUnaTantum + extraCostoUnaTantum;
+
+    const prezzoRicorrente = prezzoLavoroCalc + prezzoProdottiCalc + prezzoTrasfertaPerIntervento + extraCostoPerIntervento;
+    const prezzoUnaTantum = prezzoTrasfertaUnaTantum + extraCostoUnaTantum;
+
+    let costoPerIntervento = 0;
     let prezzoPerIntervento = 0;
+    let costoMensile = 0;
     let prezzoMensile = 0;
     let fattoreMensile = 0;
 
     if (tipoPreventivo === 'PST') {
-        prezzoPerIntervento = costoRicorrente + costoUnaTantum;
+        costoPerIntervento = costoRicorrente + costoUnaTantum;
+        prezzoPerIntervento = prezzoRicorrente + prezzoUnaTantum;
     } else {
-        prezzoPerIntervento = costoRicorrente;
+        costoPerIntervento = costoRicorrente;
+        prezzoPerIntervento = prezzoRicorrente;
 
         fattoreMensile = calculateFattoreMensile(aree, combinazione);
-        prezzoMensile = costoRicorrente * fattoreMensile + costoUnaTantum;
+        costoMensile = costoRicorrente * fattoreMensile + costoUnaTantum;
+        prezzoMensile = prezzoRicorrente * fattoreMensile + prezzoUnaTantum;
     }
 
-    const areeDetailsWithCosts = calculateAreeWithCosts(areeDetails, costoLavoro, prezzoPerIntervento, fattoreMensile, combinazione);
+    const marginePerIntervento = prezzoPerIntervento - costoPerIntervento;
+    const marginePercentualePerIntervento = costoPerIntervento > 0 ? (marginePerIntervento / costoPerIntervento) * 100 : 0;
 
-    const mqTotali = areeDetails.reduce((sum, area) => sum + area.mq, 0);
+    let margineMensile = 0;
+    let marginePercentualeMensile = 0;
+    if (tipoPreventivo === 'POR') {
+        margineMensile = prezzoMensile - costoMensile;
+        marginePercentualeMensile = costoMensile > 0 ? (margineMensile / costoMensile) * 100 : 0;
+    }
+
+    const areeDetailsWithCosts = calculateAreeWithCosts(areeDetails, costoLavoro, prezzoLavoroCalc, costoPerIntervento, fattoreMensile, combinazione);
+
     let euroPerMq = 0;
     if (mqTotali > 0) {
         if (tipoPreventivo === 'PST') {
@@ -368,13 +472,22 @@ function calculate() {
         oreOperative,
         oreTotali,
         costoLavoro,
+        prezzoLavoroCalc,
         costoProdotti,
-        trasferta,
+        prezzoProdottiCalc,
+        costoTrasferta,
+        prezzoTrasfertaCalc,
         trasfertaTipo,
-        extraPerIntervento,
-        extraUnaTantum,
+        extraCostoPerIntervento,
+        extraCostoUnaTantum,
+        costoPerIntervento,
         prezzoPerIntervento,
+        costoMensile,
         prezzoMensile,
+        marginePerIntervento,
+        marginePercentualePerIntervento,
+        margineMensile,
+        marginePercentualeMensile,
         euroPerMq,
         areeDetails: areeDetailsWithCosts,
         combinazione
@@ -439,11 +552,11 @@ function collectExtras() {
     return extras;
 }
 
-function calculateAree(aree) {
+function calculateAree(aree, costoProdottiPerMq) {
     return aree.map(area => {
         const resa = config.productivityRatesByType[area.tipo] || config.productivityRate_m2_per_h;
         const oreBase = (area.mq / resa) * area.difficolta;
-        const costoProdotti = area.mq * config.defaultMaterialCostPerM2 * area.prodotti;
+        const costoProdotti = area.mq * costoProdottiPerMq * area.prodotti;
 
         return {
             ...area,
@@ -480,11 +593,12 @@ function calculateFattoreMensile(aree, combinazione) {
     }
 }
 
-function calculateAreeWithCosts(areeDetails, costoLavoroTotale, prezzoPerIntervento, fattoreMensile, combinazione) {
+function calculateAreeWithCosts(areeDetails, costoLavoroTotale, prezzoLavoroTotale, costoTotalePerIntervento, fattoreMensile, combinazione) {
     const oreTotali = areeDetails.reduce((sum, area) => sum + area.oreBase, 0);
 
     return areeDetails.map(area => {
         const costoLavoroArea = oreTotali > 0 ? (area.oreBase / oreTotali) * costoLavoroTotale : 0;
+        const prezzoLavoroArea = oreTotali > 0 ? (area.oreBase / oreTotali) * prezzoLavoroTotale : 0;
 
         const costoAreaPerIntervento = costoLavoroArea + area.costoProdotti;
 
@@ -538,42 +652,100 @@ function renderResults(results) {
         </div>
 
         <div class="results-section">
-            <h3>Costi</h3>
-            <div class="results-item">
-                <span class="results-item-label">Costo Lavoro</span>
-                <span class="results-item-value">€ ${results.costoLavoro.toFixed(2)}</span>
+            <h3 style="color: #10b981;">Costi Azienda</h3>
+            <div class="cost-price-grid">
+                <div class="cost-price-item cost-item">
+                    <div class="label">Lavoro</div>
+                    <div class="value">€ ${results.costoLavoro.toFixed(2)}</div>
+                </div>
+                <div class="cost-price-item cost-item">
+                    <div class="label">Prodotti</div>
+                    <div class="value">€ ${results.costoProdotti.toFixed(2)}</div>
+                </div>
+                <div class="cost-price-item cost-item">
+                    <div class="label">Trasferta</div>
+                    <div class="value">€ ${results.costoTrasferta.toFixed(2)}</div>
+                </div>
+                ${results.extraCostoPerIntervento > 0 ? `
+                <div class="cost-price-item cost-item">
+                    <div class="label">Extra/int</div>
+                    <div class="value">€ ${results.extraCostoPerIntervento.toFixed(2)}</div>
+                </div>
+                ` : ''}
+                ${results.extraCostoUnaTantum > 0 ? `
+                <div class="cost-price-item cost-item">
+                    <div class="label">Extra una tantum</div>
+                    <div class="value">€ ${results.extraCostoUnaTantum.toFixed(2)}</div>
+                </div>
+                ` : ''}
             </div>
-            <div class="results-item">
-                <span class="results-item-label">Costo Prodotti</span>
-                <span class="results-item-value">€ ${results.costoProdotti.toFixed(2)}</span>
-            </div>
-            <div class="results-item">
-                <span class="results-item-label">Trasferta (${results.trasfertaTipo === 'per_intervento' ? 'per intervento' : 'una tantum'})</span>
-                <span class="results-item-value">€ ${results.trasferta.toFixed(2)}</span>
-            </div>
-            ${results.extraPerIntervento > 0 ? `
-            <div class="results-item">
-                <span class="results-item-label">Extra per Intervento</span>
-                <span class="results-item-value">€ ${results.extraPerIntervento.toFixed(2)}</span>
-            </div>
-            ` : ''}
-            ${results.extraUnaTantum > 0 ? `
-            <div class="results-item">
-                <span class="results-item-label">Extra Una Tantum</span>
-                <span class="results-item-value">€ ${results.extraUnaTantum.toFixed(2)}</span>
-            </div>
-            ` : ''}
         </div>
 
-        <div class="results-highlight">
-            <div class="label">Prezzo per Intervento</div>
-            <div class="value">€ ${results.prezzoPerIntervento.toFixed(2)}</div>
+        <div class="results-section">
+            <h3 style="color: #60a5fa;">Prezzi Vendita</h3>
+            <div class="cost-price-grid">
+                <div class="cost-price-item price-item">
+                    <div class="label">Lavoro</div>
+                    <div class="value">€ ${results.prezzoLavoroCalc.toFixed(2)}</div>
+                </div>
+                <div class="cost-price-item price-item">
+                    <div class="label">Prodotti</div>
+                    <div class="value">€ ${results.prezzoProdottiCalc.toFixed(2)}</div>
+                </div>
+                <div class="cost-price-item price-item">
+                    <div class="label">Trasferta</div>
+                    <div class="value">€ ${results.prezzoTrasfertaCalc.toFixed(2)}</div>
+                </div>
+                ${results.extraCostoPerIntervento > 0 ? `
+                <div class="cost-price-item price-item">
+                    <div class="label">Extra/int</div>
+                    <div class="value">€ ${results.extraCostoPerIntervento.toFixed(2)}</div>
+                </div>
+                ` : ''}
+                ${results.extraCostoUnaTantum > 0 ? `
+                <div class="cost-price-item price-item">
+                    <div class="label">Extra una tantum</div>
+                    <div class="value">€ ${results.extraCostoUnaTantum.toFixed(2)}</div>
+                </div>
+                ` : ''}
+            </div>
+        </div>
+
+        <div class="margin-card">
+            <h3>Margine per Intervento</h3>
+            <div class="margin-grid">
+                <div class="margin-item">
+                    <div class="label">Costo</div>
+                    <div class="value">€ ${results.costoPerIntervento.toFixed(2)}</div>
+                </div>
+                <div class="margin-item">
+                    <div class="label">Prezzo</div>
+                    <div class="value">€ ${results.prezzoPerIntervento.toFixed(2)}</div>
+                </div>
+                <div class="margin-item">
+                    <div class="label">Margine</div>
+                    <div class="value">€ ${results.marginePerIntervento.toFixed(2)}<br>(${results.marginePercentualePerIntervento.toFixed(1)}%)</div>
+                </div>
+            </div>
         </div>
 
         ${isPOR ? `
-        <div class="results-highlight">
-            <div class="label">Prezzo Mensile</div>
-            <div class="value">€ ${results.prezzoMensile.toFixed(2)}</div>
+        <div class="margin-card">
+            <h3>Margine Mensile</h3>
+            <div class="margin-grid">
+                <div class="margin-item">
+                    <div class="label">Costo</div>
+                    <div class="value">€ ${results.costoMensile.toFixed(2)}</div>
+                </div>
+                <div class="margin-item">
+                    <div class="label">Prezzo</div>
+                    <div class="value">€ ${results.prezzoMensile.toFixed(2)}</div>
+                </div>
+                <div class="margin-item">
+                    <div class="label">Margine</div>
+                    <div class="value">€ ${results.margineMensile.toFixed(2)}<br>(${results.marginePercentualeMensile.toFixed(1)}%)</div>
+                </div>
+            </div>
         </div>
         ` : ''}
 
@@ -592,7 +764,7 @@ function renderResults(results) {
                     <tr>
                         <th>Nome</th>
                         <th>Tipo area</th>
-                        <th>Tipo (POR/PST)</th>
+                        <th>Tipo</th>
                         <th>mq</th>
                         <th>Diff.</th>
                         <th>Prod.</th>
@@ -607,7 +779,9 @@ function renderResults(results) {
                     ${results.areeDetails.map(area => `
                         <tr>
                             <td>${area.nome}</td>
-                            <td>${area.tipo || area.tipoArea || ''}</td><td>${area.tipoIntervento || area.tipo || ''}</td><td>${area.mq.toFixed(1)}</td>
+                            <td>${area.tipo || area.tipoArea || ''}</td>
+                            <td>${area.tipoIntervento || area.tipo || ''}</td>
+                            <td>${area.mq.toFixed(1)}</td>
                             <td>${area.difficolta.toFixed(2)}</td>
                             <td>${area.prodotti.toFixed(2)}</td>
                             <td>${area.oreBase.toFixed(2)}</td>
@@ -624,7 +798,8 @@ function renderResults(results) {
         <div class="results-note">
             <strong>Note:</strong><br>
             • Il costo lavoro è ripartito proporzionalmente alle ore area.<br>
-            • Trasferta ed extra sono inclusi nei totali.<br>
+            • I margini sono calcolati applicando le percentuali o prezzi fissi ai costi azienda.<br>
+            • Trasferta (${results.trasfertaTipo === 'per_intervento' ? 'per intervento' : 'una tantum'}).<br>
             ${isPOR ? '• Per POR, le una tantum sono conteggiate nel totale mensile.<br>' : ''}
             ${isPOR && results.combinazione === 'MAX' ? '• Modalità MAX: le aree sono combinate nello stesso passaggio.<br>' : ''}
             ${isPOR && results.combinazione === 'SUM' ? '• Modalità SUM: gli interventi non sono combinabili.<br>' : ''}
@@ -688,6 +863,8 @@ function saveSettingsToConfig() {
 
     document.getElementById('costoOrario').value = config.defaultHourlyCost;
     document.getElementById('accessoriPercent').value = clampAccessoriesPercent(config.defaultAccessoryPercent);
+    document.getElementById('costoProdottiPerMq').value = config.defaultMaterialCostPerM2;
+    document.getElementById('costoKm').value = config.defaultKmCost;
 
     calculate();
 }

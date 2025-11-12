@@ -25,5 +25,11 @@
   "defaultKmCost": 0.5,
   "defaultMinimumHours": 1,
   "roundToQuarterHour": true,
-  "weeksPerMonth": 4.333
+  "weeksPerMonth": 4.333,
+  "defaultMarginLavoro": 30,
+  "defaultMarginProdotti": 30,
+  "defaultMarginKm": 30,
+  "defaultPriceHourly": 28.60,
+  "defaultPriceProducts": 0.065,
+  "defaultPriceKm": 0.65
 }
